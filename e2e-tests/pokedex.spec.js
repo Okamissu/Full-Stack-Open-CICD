@@ -10,4 +10,12 @@ describe('Pokedex', () => {
       ),
     ).toBeVisible()
   })
+
+  test('pokemon details page can be opened from the front page', async ({
+    page,
+  }) => {
+    await page.goto('')
+    await page.getByText('ivysaur').click()
+    await expect(page.getByText('chlorophyll')).toBeVisible()
+  })
 })
