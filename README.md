@@ -1,6 +1,10 @@
-# Full Stack open CI/CD
+# Full Stack Open CI/CD
 
 This repository is used for the CI/CD module of the Full Stack Open course
+
+## Fly.io Deploy
+
+[Check here](https://full-stack-open-cicd.fly.dev/)
 
 ## Commands
 
