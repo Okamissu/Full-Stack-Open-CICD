@@ -43,6 +43,13 @@ jobs:
           path: playwright-report/
           retention-days: 5
 
+      # Bump version and push tag ONLY on pushes to main
+      - name: Bump version and push tag
+        if: ${{ github.event_name == 'push' }}
+        uses: anothrNick/github-tag-action@1.75.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       # Runs ONLY on direct pushes or merged PRs to main
       - name: Setup Flyctl
         if: ${{ github.event_name == 'push' }}
