@@ -48,7 +48,6 @@ jobs:
       # Deploy only on pushes to main
       - name: Setup Flyctl
         if: ${{ github.event_name == 'push' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
-
         uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Deploy to Fly.io
@@ -56,6 +55,32 @@ jobs:
         run: flyctl deploy --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Discord Success Notification
+        uses: sarisia/actions-status-discord@v1
+        if: ${{ success() && github.event_name == 'push' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          status: ${{ job.status }}
+          title: 'Deployment Successful! A new version deployed to production'
+          nodetail: true
+          color: '0x2ecc71'
+          description: |
+            **Deployment Details**
+
+            **Commit:** ${{ github.sha }}
+            **Message:** ${{ github.event.head_commit.message }}
+            **Author:** ${{ github.actor }}
+
+      - name: Discord Failure Notification
+        uses: sarisia/actions-status-discord@v1
+        if: failure()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          status: ${{ job.status }}
+          title: 'Build Failed! The pipeline encountered an error'
+          nodetail: false
+          color: '0xe74c3c'
 
   tag_release:
     needs: [deployment_pipeline]
