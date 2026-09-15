@@ -57,7 +57,7 @@ jobs:
           path: playwright-report/
           retention-days: 5
 
-  # Deplyo to Fly.io 
+  # Deplyo to Fly.io
   # Waits for both unit and E2E tests to complete
   deploy_to_fly:
     needs: [simple_pipeline, e2e_tests]
@@ -67,7 +67,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Setup Flyctl
-        uses: superfly/flyctl-actions/setup-flyctl@master
+        uses: superfly/flyctl-actions/setup-flyctl@1.6
 
       - name: Deploy to Fly.io
         run: flyctl deploy --remote-only
@@ -100,7 +100,7 @@ jobs:
         uses: sarisia/actions-status-discord@v1
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          status: "Success"
+          status: 'Success'
           title: 'Deployment Successful! A new version deployed to production'
           nodetail: true
           color: '0x2ecc71'
@@ -114,14 +114,14 @@ jobs:
   # Discord failure notification
   notify_failure:
     needs: [simple_pipeline, e2e_tests, deploy_to_fly]
-    if: ${{ failure() }} 
+    if: ${{ failure() }}
     runs-on: ubuntu-latest
     steps:
       - name: Discord Failure Notification
         uses: sarisia/actions-status-discord@v1
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          status: "Failure"
+          status: 'Failure'
           title: 'Build Failed! The pipeline encountered an error'
           nodetail: false
           color: '0xe74c3c'
