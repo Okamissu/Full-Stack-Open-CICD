@@ -3,17 +3,22 @@ name: Periodic Health Check
 on:
   workflow_dispatch:
   schedule:
-    # Runs once every day (at 00:00 UTC) to conserve free build minutes
+    # Runs once every day (at 00:00 UTC)
     - cron: '0 0 * * *'
 
 jobs:
   periodic_health_check:
     runs-on: ubuntu-latest
+    permissions: {}
+    timeout-minutes: 5
+
     steps:
       - name: URL Health Check
+        # Pinned to SHA for Jtalk/url-health-check-action v5
         uses: Jtalk/url-health-check-action@e7d5ebdc9027fbf494d2d034f3e8fc78f8b7a2b9 # v5
         with:
           url: https://full-stack-open-cicd.fly.dev/health
           follow-redirect: true
+          # Maximum number of attempts before failing
           max-attempts: 3
           retry-delay: 5s
