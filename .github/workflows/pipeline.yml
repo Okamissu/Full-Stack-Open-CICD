@@ -9,12 +9,11 @@ on:
     types: [opened, synchronize]
 
 jobs:
-  deployment_pipeline:
+  # Build project & Unit tests
+  simple_pipeline:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
       - uses: actions/setup-node@v6
         with:
@@ -32,6 +31,19 @@ jobs:
       - name: Run unit tests
         run: npm run test
 
+  # E2E - paralel to unit tests
+  e2e_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
@@ -45,50 +57,29 @@ jobs:
           path: playwright-report/
           retention-days: 5
 
-      # Deploy only on pushes to main
+  # Deplyo to Fly.io 
+  # Waits for both unit and E2E tests to complete
+  deploy_to_fly:
+    needs: [simple_pipeline, e2e_tests]
+    if: ${{ github.event_name == 'push' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
       - name: Setup Flyctl
-        if: ${{ github.event_name == 'push' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
         uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Deploy to Fly.io
-        if: ${{ github.event_name == 'push' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
         run: flyctl deploy --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
-      - name: Discord Success Notification
-        uses: sarisia/actions-status-discord@v1
-        if: ${{ success() && github.event_name == 'push' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
-        with:
-          webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          status: ${{ job.status }}
-          title: 'Deployment Successful! A new version deployed to production'
-          nodetail: true
-          color: '0x2ecc71'
-          description: |
-            **Deployment Details**
-
-            **Commit:** ${{ github.sha }}
-            **Message:** ${{ github.event.head_commit.message }}
-            **Author:** ${{ github.actor }}
-
-      - name: Discord Failure Notification
-        uses: sarisia/actions-status-discord@v1
-        if: failure()
-        with:
-          webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          status: ${{ job.status }}
-          title: 'Build Failed! The pipeline encountered an error'
-          nodetail: false
-          color: '0xe74c3c'
-
+  # Tag versioning on successful deploy
   tag_release:
-    needs: [deployment_pipeline]
-    if: ${{ github.event_name == 'push' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
+    needs: [deploy_to_fly]
     runs-on: ubuntu-latest
     permissions:
       contents: write
-
     steps:
       - uses: actions/checkout@v6
         with:
@@ -99,3 +90,38 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEFAULT_BUMP: patch
+
+  # Discord success notification
+  notify_success:
+    needs: [deploy_to_fly]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Discord Success Notification
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          status: "Success"
+          title: 'Deployment Successful! A new version deployed to production'
+          nodetail: true
+          color: '0x2ecc71'
+          description: |
+            **Deployment Details**
+
+            **Commit:** ${{ github.sha }}
+            **Message:** ${{ github.event.head_commit.message }}
+            **Author:** ${{ github.actor }}
+
+  # Discord failure notification
+  notify_failure:
+    needs: [simple_pipeline, e2e_tests, deploy_to_fly]
+    if: ${{ failure() }} 
+    runs-on: ubuntu-latest
+    steps:
+      - name: Discord Failure Notification
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          status: "Failure"
+          title: 'Build Failed! The pipeline encountered an error'
+          nodetail: false
+          color: '0xe74c3c'
