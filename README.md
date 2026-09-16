@@ -6,6 +6,10 @@ This repository is used for the CI/CD module of the Full Stack Open course
 
 [Check here](https://full-stack-open-cicd.fly.dev/)
 
+## Exercises 21 & 22 Repo
+
+[Bloglist CI/CD](https://github.com/Okamissu/Bloglist-CICD)
+
 ## Commands
 
 Start by running `npm install` inside the project folder
